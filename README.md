@@ -57,8 +57,9 @@ Extra deobfuscation passes written for this fork:
 - **`zelix.NumberEncryptionTransformer`** — reverses ZKM long/number encryption (`decryptor.a(seedA, seedB, null).a(encrypted)` → the literal `long`) by emulating the decryptor in the VM. **Needs JDK 8** (like the `Simple`/`Enhanced` string transformers).
 - **`zelix.EnumObfuscationTransformer`** — restores the `ACC_ENUM` flag on enum classes and their constant fields when an obfuscator has stripped it. Without it, decompilers emit illegal `new TheEnum("X", 0)` field initializers instead of proper enum constants. **No VM, any JDK.**
 - **`normalizer.CaseClassNormalizer`** — renames classes whose names differ only by case (e.g. `Foo` / `foo`), which otherwise overwrite each other when a jar is extracted or decompiled on a case-insensitive filesystem (Windows/macOS). All references are rewritten. Run it last. **No VM, any JDK.**
+- **`normalizer.ReturnTypeOverloadNormalizer`** — renames methods that share a name and parameter types but differ only in return type (legal in bytecode, illegal in Java source, so decompiled output won't compile). Renames each colliding variant consistently across every declaration and call site, so override chains stay intact — and needs no class hierarchy/libraries on the classpath. Run it last. **No VM, any JDK.**
 
-On a real Zelix-obfuscated sample these recover every ZKM `invokedynamic` call and encrypted `long`, restore all enum constants, and resolve every case-only class-name collision — alongside the strings handled by the main string transformer.
+On a real Zelix-obfuscated sample these recover every ZKM `invokedynamic` call and encrypted `long`, restore all enum constants, resolve every case-only class-name collision, and disambiguate every return-type method overload — alongside the strings handled by the main string transformer.
 
 ---
 
