@@ -141,8 +141,7 @@ public class ByteArrayStringTransformer extends Transformer<TransformerConfig> {
                     }
                 } while (modify);
             } catch (Exception ex) {
-                System.err.println("[ByteArrayStringTransformer] An error occurred while deobfuscating " + classNode.name + " " + methodNode.name + methodNode.desc + ":");
-                ex.printStackTrace();
+                System.err.println("[ByteArrayStringTransformer] Skipped " + classNode.name + " " + methodNode.name + methodNode.desc + " (unsupported pattern: " + ex + ")");
                 errorCounter.increment();
             }
         }));

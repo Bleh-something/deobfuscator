@@ -112,6 +112,7 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
 		AtomicInteger encStrings = new AtomicInteger();
 		System.out.println("[Zelix] [StringEncryptionTransformer] Starting");
 		classNodes().forEach(classNode -> {
+			try {
 			MethodNode clinit = classNode.methods.stream().filter(m -> m.name.equals("<clinit>")).findFirst().orElse(null);
 			if(clinit != null && (includeOnly == null || includeOnly.contains(classNode.name)))
 			{
@@ -782,10 +783,19 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
 							}while(!done);
 							clinit.instructions.insertBefore(firstZKMInstr, insertedLabel = new LabelNode(new Label()));
 							clinit.instructions.insert(insertedGoto = new JumpInsnNode(Opcodes.GOTO, insertedLabel));
-							Object res = MethodExecutor.execute(classNode, clinit, Arrays.asList(), null, context);
-							clinit.instructions.remove(insertedGoto);
-							clinit.instructions.remove(insertedLabel);
-							clinit.instructions.remove(insertedReturn);
+							Object res;
+							try {
+								res = MethodExecutor.execute(classNode, clinit, Arrays.asList(), null, context);
+							} finally {
+								// Always strip the scaffolding we inserted, even if execution failed,
+								// so that a skipped class is not left with a corrupted <clinit>.
+								if (insertedGoto != null)
+									clinit.instructions.remove(insertedGoto);
+								if (insertedLabel != null)
+									clinit.instructions.remove(insertedLabel);
+								if (insertedReturn != null)
+									clinit.instructions.remove(insertedReturn);
+							}
 							if(mode == 0)
 							{
 								if(start.getNext().getOpcode() == Opcodes.ALOAD
@@ -1957,6 +1967,9 @@ public class StringEncryptionTransformer extends Transformer<StringEncryptionTra
 						}
 					}
 				}
+			}
+			} catch (Throwable zkmFailure) {
+				System.out.println("[Zelix] [StringEncryptionTransformer] Failed to process " + classNode.name + ", skipping (" + zkmFailure + ")");
 			}
 		});
 		System.out.println("[Zelix] [StringEncryptionTransformer] Decrypted strings from " + encClasses.get() + " encrypted classes");

@@ -23,7 +23,9 @@ public class RedundantGotoRemover extends Transformer<TransformerConfig> {
                     {
                         AbstractInsnNode a = Utils.getNext(node);
                         AbstractInsnNode b = Utils.getNext(((JumpInsnNode)node).label);
-                        if(a == b) 
+                        if(a == null || b == null)
+                            continue;
+                        if(a == b)
                         {
                         	method.instructions.remove(node);
                         	counter.incrementAndGet();
@@ -95,7 +97,7 @@ public class RedundantGotoRemover extends Transformer<TransformerConfig> {
 	    								}
 	    						if(!used)
 	    							method.instructions.remove(((JumpInsnNode)b).label);
-	    						if(prev.getOpcode() == Opcodes.GOTO)
+	    						if(prev != null && prev.getOpcode() == Opcodes.GOTO)
 	    						{
 	    							AbstractInsnNode a2 = Utils.getNext(prev);
 	    							AbstractInsnNode b2 = Utils.getNext(((JumpInsnNode)prev).label);

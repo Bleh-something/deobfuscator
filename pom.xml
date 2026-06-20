@@ -81,10 +81,7 @@
         </plugins>
     </build>
     <repositories>
-        <repository>
-            <id>java-deobfuscator-repository</id>
-            <url>https://repo.samczsun.com/repository/java-deobfuscator</url>
-        </repository>
+        <!-- repo.samczsun.com is offline; everything now resolves from Maven Central + JitPack -->
         <repository>
             <id>jitpack.io</id>
             <url>https://jitpack.io</url>
@@ -188,10 +185,11 @@
         </dependency>
 
         <!-- needs to be very late in the pom as it got a bunch of old stuff shaded inside -->
+        <!-- samczsun's repo (repo.samczsun.com) is offline, so pull javavm from jitpack instead -->
         <dependency>
-            <groupId>com.javadeobfuscator</groupId>
+            <groupId>com.github.java-deobfuscator</groupId>
             <artifactId>javavm</artifactId>
-            <version>3.0.0</version>
+            <version>12e219644f</version>
         </dependency>
 
         <dependency>

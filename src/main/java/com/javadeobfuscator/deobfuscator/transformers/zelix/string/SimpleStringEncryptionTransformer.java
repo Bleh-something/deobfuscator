@@ -71,7 +71,14 @@ public class SimpleStringEncryptionTransformer extends Transformer<SimpleStringE
 
     @Override
     public boolean transform() throws WrongTransformerException {
-        VirtualMachine vm = TransformerHelper.newVirtualMachine(this);
+        VirtualMachine vm;
+        try {
+            vm = TransformerHelper.newVirtualMachine(this);
+        } catch (Throwable t) {
+            System.out.println("[Zelix] [SimpleStringEncryptionTransformer] Could not initialize the emulation VM "
+                + "(needs a JDK 8 rt.jar; cannot run on a modern modular JDK) - skipping: " + t);
+            return false;
+        }
 
         // In this mode of string encryption, class hierarchy doesn't matter. Manually flag all classes as initialized
         for (ClassNode classNode : classes.values()) {

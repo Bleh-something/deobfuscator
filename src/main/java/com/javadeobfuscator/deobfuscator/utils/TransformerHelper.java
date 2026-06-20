@@ -259,9 +259,22 @@ public class TransformerHelper implements Opcodes {
 
     public static VirtualMachine newVirtualMachine(Transformer<?> transformer) {
         List<byte[]> jvmFiles = new ArrayList<>();
-        jvmFiles.addAll(loadBytes(javaLib("rt.jar")));
-        jvmFiles.addAll(loadBytes(javaLib("jce.jar")));
-        jvmFiles.addAll(loadBytes(javaLib("jsse.jar")));
+        for (String runtimeJar : new String[] { "rt.jar", "jce.jar", "jsse.jar" }) {
+            File jar = javaLib(runtimeJar);
+            // Avoid loadBytes printing a NoSuchFileException stack trace on modular JDKs (9+),
+            // where these jars simply do not exist.
+            if (jar.exists()) {
+                jvmFiles.addAll(loadBytes(jar));
+            }
+        }
+        if (jvmFiles.isEmpty()) {
+            // No rt.jar/jce.jar/jsse.jar present -> almost certainly a modular JDK (9+). The javavm
+            // VirtualMachine cannot bootstrap without the runtime classes, so fail with a clear
+            // message instead of a cryptic NullPointerException deep inside javavm.
+            throw new RuntimeException("Could not load the JVM runtime classes (rt.jar/jce.jar/jsse.jar) from "
+                + System.getProperty("java.home") + File.separator + "lib. These VM-based transformers require a "
+                + "JDK 8 runtime; run the deobfuscator on JDK 8 (or supply rt.jar) to use them.");
+        }
 //        jvmFiles.addAll(loadBytes(javaLibExt("sunjce_provider.jar")));
 //        jvmFiles.addAll(loadBytes(javaLibExt("sunec.jar")));
 //        jvmFiles.addAll(loadBytes(javaLibExt("sunmscapi.jar")));

@@ -280,6 +280,14 @@ public class MethodAnalyzer {
                 throw e;
             }
             throw new PreventableStackOverflowError("Ran out of stack space while analyzing a method");
+        } catch (IndexOutOfBoundsException e) {
+            // The abstract operand stack underflowed on an infeasible/obfuscated path (e.g. a
+            // POP2/DUP*/math on a stack shorter than the opcode expects). The analysis is
+            // best-effort, so return the frames computed so far; callers such as ConstantFolder
+            // just skip instructions that have no frame instead of crashing the whole run.
+            if (Boolean.getBoolean("com.javadeobfuscator.MethodAnalyzer.debug") || DEBUG) {
+                throw e;
+            }
         }
         return result;
     }
@@ -333,6 +341,31 @@ public class MethodAnalyzer {
     private static void assureSize(List<StackObject> list, int size) {
         while (list.size() <= size) {
             list.add(null);
+        }
+    }
+
+    /**
+     * Builds a placeholder value for a local that is read before it has been written along the
+     * path currently being analyzed. This happens in obfuscated (or simply dead) code where the
+     * verifier-feasible state never actually occurs. Rather than crashing, we model the slot as
+     * an unknown argument-like value of the type implied by the load opcode so the abstract
+     * interpreter can keep going. Such a value is never a foldable constant, so transformers that
+     * rely on this analysis (e.g. ConstantFolder) simply leave the affected instruction alone.
+     */
+    private static StackObject makeUnknownLocal(int loadOpcode, int var) {
+        ArgumentFrame frame = new ArgumentFrame(loadOpcode, var);
+        switch (loadOpcode) {
+            case Opcodes.LLOAD:
+                return new StackObject(long.class, frame);
+            case Opcodes.FLOAD:
+                return new StackObject(float.class, frame);
+            case Opcodes.DLOAD:
+                return new StackObject(double.class, frame);
+            case Opcodes.ALOAD:
+                return new StackObject(Object.class, frame, "java/lang/Object");
+            case Opcodes.ILOAD:
+            default:
+                return new StackObject(int.class, frame);
         }
     }
 
@@ -416,6 +449,10 @@ public class MethodAnalyzer {
                     VarInsnNode cast = (VarInsnNode) now;
                     assureSize(locals, cast.var);
                     StackObject stackObject = locals.get(cast.var);
+                    if (stackObject == null) {
+                        stackObject = makeUnknownLocal(now.getOpcode(), cast.var);
+                        locals.set(cast.var, stackObject);
+                    }
                     currentFrame = new LocalFrame(now.getOpcode(), cast.var, stackObject.value);
                     stack.add(0, stackObject);
                     break;
@@ -634,6 +671,10 @@ public class MethodAnalyzer {
                     IincInsnNode cast = (IincInsnNode) now;
                     assureSize(locals, cast.var);
                     StackObject obj = locals.get(cast.var);
+                    if (obj == null) {
+                        obj = makeUnknownLocal(Opcodes.ILOAD, cast.var);
+                        locals.set(cast.var, obj);
+                    }
                     currentFrame = new LocalFrame(now.getOpcode(), cast.var, obj.value);
                     break;
                 }

@@ -39,14 +39,14 @@ public class LdcSwapInvokeSwapPopRemover extends Transformer<TransformerConfig> 
                         AbstractInsnNode node = methodNode.instructions.get(i);
                         if (Utils.willPushToStack(node.getOpcode())) {
                             AbstractInsnNode next = Utils.getNext(node);
-                            if (next.getOpcode() == Opcodes.SWAP) {
+                            if (next != null && next.getOpcode() == Opcodes.SWAP) {
                                 AbstractInsnNode swap = next;
                                 next = Utils.getNext(next);
                                 if (next instanceof MethodInsnNode) {
                                     MethodInsnNode methodInsnNode = (MethodInsnNode) next;
                                     if (methodInsnNode.desc.equals("(Ljava/lang/String;)Ljava/lang/String;")) { //Lazy
                                         AbstractInsnNode next1 = Utils.getNext(next);
-                                        if (next1.getOpcode() == Opcodes.SWAP && next1.getNext().getOpcode() == Opcodes.POP) {
+                                        if (next1 != null && next1.getOpcode() == Opcodes.SWAP && next1.getNext() != null && next1.getNext().getOpcode() == Opcodes.POP) {
                                             methodNode.instructions.remove(next1.getNext());
                                             methodNode.instructions.remove(next1);
                                             methodNode.instructions.remove(swap);

@@ -48,7 +48,14 @@ public class EnhancedStringEncryptionTransformer extends Transformer<EnhancedStr
 
     @Override
     public boolean transform() throws Throwable, WrongTransformerException {
-        VirtualMachine vm = TransformerHelper.newVirtualMachine(this);
+        VirtualMachine vm;
+        try {
+            vm = TransformerHelper.newVirtualMachine(this);
+        } catch (Throwable t) {
+            System.out.println("[Zelix] [EnhancedStringEncryptionTransformer] Could not initialize the emulation VM "
+                + "(needs a JDK 8 rt.jar; cannot run on a modern modular JDK) - skipping: " + t);
+            return false;
+        }
 
         for (ClassNode classNode : classes.values()) {
             // Just YOLO through the initialization process

@@ -1,5 +1,6 @@
 /target
 /bin
+/generated/
 /src/debug/
 /src/test/resources/Krakatau
 /src/test/resources/testcases/*.class

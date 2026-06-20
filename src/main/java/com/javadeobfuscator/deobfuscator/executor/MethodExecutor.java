@@ -446,6 +446,9 @@ public class MethodExecutor {
                     case FLOAD:
                     case ALOAD: {
                         VarInsnNode cast = (VarInsnNode) now;
+                        if (locals.get(cast.var) == null) {
+                            throw new ExecutionException("Tried to load uninitialized local variable " + cast.var);
+                        }
                         stack.add(0, locals.get(cast.var).copy());
                         if (VERIFY) {
                             switch (now.getOpcode()) {
@@ -471,6 +474,9 @@ public class MethodExecutor {
                     case LLOAD:
                     case DLOAD: {
                         VarInsnNode cast = (VarInsnNode) now;
+                        if (locals.get(cast.var) == null) {
+                            throw new ExecutionException("Tried to load uninitialized local variable " + cast.var);
+                        }
                         stack.add(0, locals.get(cast.var).copy());
                         stack.add(0, new JavaTop());
                         if (VERIFY) {

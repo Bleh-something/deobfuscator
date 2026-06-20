@@ -19,6 +19,7 @@ package com.javadeobfuscator.deobfuscator;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.lang.reflect.Modifier;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.*;
@@ -504,20 +505,49 @@ public class Deobfuscator {
     }
 
     private ClassNode pullFromRuntime(String ref) {
-        try {
-            if (!missingRefs.contains(ref)) {
-                // Realistically we do not need the method bodies at all, can skip.
-                ClassNode node = new ClassNode(Opcodes.ASM9);
-                new ClassReader(ref).accept(node, ClassReader.SKIP_CODE);
-                classpath.put(ref, node);
-                return node;
-            }
-        } catch (IOException ex) {
-            // Ignored, plenty of cases where ref will not exist at runtime.
-            // Cache missing value so that we don't try again later.
-            missingRefs.add(ref);
+        if (missingRefs.contains(ref)) {
+            return null;
         }
-        return null;
+        // Realistically we do not need the method bodies at all, can skip.
+        byte[] bytes;
+        try (InputStream in = ClassLoader.getSystemResourceAsStream(ref + ".class")) {
+            if (in == null) {
+                // Plenty of cases where ref will not exist at runtime.
+                // Cache missing value so that we don't try again later.
+                missingRefs.add(ref);
+                return null;
+            }
+            bytes = IOUtils.toByteArray(in);
+        } catch (IOException ex) {
+            missingRefs.add(ref);
+            return null;
+        }
+        ClassNode node = new ClassNode(Opcodes.ASM9);
+        try {
+            new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE);
+        } catch (IllegalArgumentException ex) {
+            // The runtime class was compiled for a newer Java version than our bundled
+            // ASM can parse (e.g. running the deobfuscator on a very recent JDK). We only
+            // need the type hierarchy here (SKIP_CODE), which is independent of the class
+            // file version, so downgrade the version bytes and read it again.
+            if (bytes.length >= 8) {
+                bytes[4] = 0; // minor version
+                bytes[5] = 0;
+                bytes[6] = 0; // major version -> 52 (Java 8)
+                bytes[7] = 52;
+            }
+            node = new ClassNode(Opcodes.ASM9);
+            try {
+                new ClassReader(bytes).accept(node, ClassReader.SKIP_CODE);
+            } catch (RuntimeException ex2) {
+                // Still unparseable after the version downgrade (e.g. genuinely malformed); give up
+                // on this ref rather than letting it abort the whole run.
+                missingRefs.add(ref);
+                return null;
+            }
+        }
+        classpath.put(ref, node);
+        return node;
     }
 
     public void loadHierachy() {
@@ -654,8 +684,8 @@ public class Deobfuscator {
                 System.out.println("Error: " + ex.getClassName() + " could not be found while writing " + node.name + ". Using COMPUTE_MAXS");
                 writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
                 node.accept(writer);
-            } else if (e instanceof NegativeArraySizeException || e instanceof ArrayIndexOutOfBoundsException) {
-                System.out.println("Error: failed to compute frames");
+            } else if (e instanceof NegativeArraySizeException || e instanceof ArrayIndexOutOfBoundsException || e instanceof AssertionError) {
+                System.out.println("Error: failed to compute frames for " + node.name + "; using COMPUTE_MAXS");
                 writer = new CustomClassWriter(ClassWriter.COMPUTE_MAXS);
                 node.accept(writer);
             } else if (e.getMessage() != null) {
