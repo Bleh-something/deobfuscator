@@ -23,7 +23,7 @@ Upstream no longer builds or runs cleanly on current JDKs. On **JDK 25** (and an
 ### 🩹 Crash fixes — no more aborted runs
 - **`MethodAnalyzer`** (the abstract interpreter behind `ConstantFolder` etc.): synthesizes an *unknown* value when a local is read before being written on an obfuscated/dead path instead of throwing an NPE, and catches abstract operand-stack underflow (`POP2` / `DUP_x` / array / math) so it degrades gracefully.
 - **`MethodExecutor`** (the Zelix string emulator): throws a clean, catchable `ExecutionException` instead of a raw NPE on an uninitialized local load.
-- **Zelix `StringEncryptionTransformer`**: isolates each class — one ZKM variant it can't emulate is skipped (with the temporary `<clinit>` scaffolding rolled back) instead of aborting the entire run. On a real Vulcan 2.9.7.17 jar this decrypts **1649 strings across 222 classes** and cleanly skips the handful it doesn't support.
+- **Zelix `StringEncryptionTransformer`**: isolates each class — one ZKM variant it can't emulate is skipped (with the temporary `<clinit>` scaffolding rolled back) instead of aborting the entire run. 
 - **Peephole** `LdcSwapInvokeSwapPopRemover` and `RedundantGotoRemover`: null-guarded against truncated/obfuscated instruction tails.
 
 ### 🏗️ Build fix
