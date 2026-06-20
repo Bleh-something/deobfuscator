@@ -49,14 +49,16 @@ Two Zelix transformers — `zelix.string.SimpleStringEncryptionTransformer` and 
 
 ---
 
-## New Zelix transformers added in this fork
+## New transformers added in this fork
 
-Two extra ZKM layers, written for this fork:
+Extra deobfuscation passes written for this fork:
 
 - **`zelix.InvokedynamicTransformer`** — devirtualizes ZKM's `invokedynamic` obfuscation. ZKM hides calls behind an indy whose bootstrap installs a lazy linker; this resolves the real target statically (bootstrap → linker → target) and rewrites each indy to a plain `invokestatic`. Genuine Java lambdas (`LambdaMetafactory`) are left untouched. **No VM, runs on any JDK.**
 - **`zelix.NumberEncryptionTransformer`** — reverses ZKM long/number encryption (`decryptor.a(seedA, seedB, null).a(encrypted)` → the literal `long`) by emulating the decryptor in the VM. **Needs JDK 8** (like the `Simple`/`Enhanced` string transformers).
+- **`zelix.EnumObfuscationTransformer`** — restores the `ACC_ENUM` flag on enum classes and their constant fields when an obfuscator has stripped it. Without it, decompilers emit illegal `new TheEnum("X", 0)` field initializers instead of proper enum constants. **No VM, any JDK.**
+- **`normalizer.CaseClassNormalizer`** — renames classes whose names differ only by case (e.g. `Foo` / `foo`), which otherwise overwrite each other when a jar is extracted or decompiled on a case-insensitive filesystem (Windows/macOS). All references are rewritten. Run it last. **No VM, any JDK.**
 
-On a real Zelix-obfuscated sample these recover every ZKM `invokedynamic` call and encrypted `long` the jar contains, alongside the strings handled by the main string transformer.
+On a real Zelix-obfuscated sample these recover every ZKM `invokedynamic` call and encrypted `long`, restore all enum constants, and resolve every case-only class-name collision — alongside the strings handled by the main string transformer.
 
 ---
 
