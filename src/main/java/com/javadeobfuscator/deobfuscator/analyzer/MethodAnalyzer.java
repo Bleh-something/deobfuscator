@@ -280,11 +280,11 @@ public class MethodAnalyzer {
                 throw e;
             }
             throw new PreventableStackOverflowError("Ran out of stack space while analyzing a method");
-        } catch (IndexOutOfBoundsException e) {
-            // The abstract operand stack underflowed on an infeasible/obfuscated path (e.g. a
-            // POP2/DUP*/math on a stack shorter than the opcode expects). The analysis is
-            // best-effort, so return the frames computed so far; callers such as ConstantFolder
-            // just skip instructions that have no frame instead of crashing the whole run.
+        } catch (RuntimeException e) {
+            // Best-effort abstract interpreter: on any failure analyzing infeasible/obfuscated
+            // bytecode (operand-stack underflow, an unexpected null on a dead path, a bad cast, ...)
+            // return the frames computed so far instead of aborting the whole run. Callers such as
+            // ConstantFolder simply skip instructions that have no computed frame.
             if (Boolean.getBoolean("com.javadeobfuscator.MethodAnalyzer.debug") || DEBUG) {
                 throw e;
             }
